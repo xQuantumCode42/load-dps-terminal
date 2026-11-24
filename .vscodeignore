@@ -1,0 +1,17 @@
+.vscode/**
+src/**
+test/**
+scripts/**
+docs/**
+!docs/validation.md
+node_modules/**
+dist/test.cjs
+dist/host.cjs
+dist/reopen.cjs
+dist/*.map
+release/**
+.test-*/**
+.vscode-test/**
+tsconfig.json
+package-lock.json
+*.log

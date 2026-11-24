@@ -1,0 +1,110 @@
+{
+  "name": "load-dependency",
+  "displayName": "Load Dependency",
+  "description": "Refresh CLI paths in managed PowerShell, CMD and WSL terminals without restarting VS Code.",
+  "version": "0.1.0",
+  "previewBuild": "2026-11-24-initialization-fix",
+  "publisher": "load-dependency-local",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.93.0",
+    "node": ">=22.12"
+  },
+  "categories": [
+    "Other"
+  ],
+  "extensionKind": [
+    "ui"
+  ],
+  "main": "./dist/extension.cjs",
+  "activationEvents": [
+    "onStartupFinished",
+    "onTerminalProfile:loadDependency.powershell",
+    "onTerminalProfile:loadDependency.pwsh",
+    "onTerminalProfile:loadDependency.cmd",
+    "onTerminalProfile:loadDependency.wsl",
+    "onTerminalProfile:loadDependency.bash"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    },
+    "virtualWorkspaces": false
+  },
+  "contributes": {
+    "terminal": {
+      "profiles": [
+        { "id": "loadDependency.powershell", "title": "Load Dependency: Windows PowerShell", "icon": "terminal-powershell" },
+        { "id": "loadDependency.pwsh", "title": "Load Dependency: PowerShell 7", "icon": "terminal-powershell" },
+        { "id": "loadDependency.cmd", "title": "Load Dependency: Command Prompt", "icon": "terminal-cmd" },
+        { "id": "loadDependency.wsl", "title": "Load Dependency: Ubuntu / WSL", "icon": "terminal-ubuntu" },
+        { "id": "loadDependency.bash", "title": "Load Dependency: Bash", "icon": "terminal-bash" }
+      ]
+    },
+    "commands": [
+      {
+        "command": "loadDependency.openTerminal",
+        "title": "Load Dependency: Open Terminal"
+      },
+      {
+        "command": "loadDependency.refresh",
+        "title": "Load Dependency: Request PATH Refresh"
+      },
+      {
+        "command": "loadDependency.diagnostics",
+        "title": "Load Dependency: Show Status"
+      },
+      {
+        "command": "loadDependency.restartExtensions",
+        "title": "Load Dependency: Restart Extensions"
+      },
+      {
+        "command": "loadDependency.setDefaultTerminal",
+        "title": "Load Dependency: Set Default Terminal"
+      },
+      {
+        "command": "loadDependency.restoreDefaultTerminal",
+        "title": "Load Dependency: Restore Previous Default Terminal"
+      }
+    ],
+    "configuration": {
+      "title": "Load Dependency",
+      "properties": {
+        "loadDependency.autoDefaultTerminal": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "On activation, wrap a supported native default in the matching Load Dependency profile for the normal + button. Turn off to keep a native default and restore saved settings. Shell startup files are not modified."
+        },
+        "loadDependency.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Automatically refresh managed terminals after supported successful installations. Existing terminals read this setting when recreated."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "tsc --noEmit",
+    "test": "node scripts/test.mjs",
+    "test:host": "node scripts/test-host.mjs",
+    "test:reopen": "node scripts/test-reopen.mjs",
+    "package": "npm run check && node scripts/package.mjs",
+    "vscode:prepublish": "npm run build"
+  },
+  "overrides": {
+    "@vscode/vsce": {
+      "minimatch": "^11.0.1"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "1.93.0",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.1.1",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0"
+  }
+}

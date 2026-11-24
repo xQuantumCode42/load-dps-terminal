@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.test-profile/
+.test-extensions/
+.test-workspace/
+.vscode-test/
+release/
+*.log
