@@ -28,109 +28,44 @@
 若更新舊版試用檔，請重新安裝新的 VSIX，關閉舊終端機，再按 `+` 開新的。
 舊終端機仍使用啟動當時的腳本，重新安裝插件不會替換它的 shell 鉤子；不需因此退出整個 VS Code。
 
-## 動手驗證：同一個終端機自動取得新的 PATH
+## 一鍵驗證（Windows PowerShell）
 
-這裡改用常見的靜態網站工具 [http-server](https://github.com/http-party/http-server)，只執行 `--version`，不啟動伺服器。
-把它安裝到獨立的暫存目錄，測完就移除，不影響原本的全域套件或專案。
-
-**為什麼不能只用 `npm install -g` 測試？** npm 的工具目錄若原本就在 PATH，普通終端機也能立即找到新套件。
-下面刻意新增一個原本不存在於 PATH 的目錄，才能驗證刷新是否有效。
-npm 不會替這個自訂目錄設定 Windows PATH，因此第 3 步會手動模擬安裝程式更新使用者 PATH。
-這是 **Windows PowerShell 的 PATH 刷新驗證**，不是宣稱每次 npm 安裝都需要插件。
-
-### 準備
-
-先安裝 Windows 版 Node.js／npm，將預設終端機設為 **Load Dependency: Windows PowerShell**，再按 **`+`**。
-用 **Load Dependency: Show Status** 確認目前終端機的 hook 是 `confirmed by shell readiness marker`。
-
-**全程使用同一個 PowerShell 終端機。每個程式碼區塊分開執行，等提示字元再次出現才貼下一段。**
-不要重開終端機、不要執行 `ld-refresh`，也不要手動設定 `$env:Path`。
-此範例會暫時新增一筆「使用者 PATH」；最後的清理步驟會移除該筆設定。
-
-### 1. 安裝到獨立目錄
+按 **`+`** 開啟 Load Dependency 的 Windows PowerShell 終端機，確認 Windows 版 Node.js／npm 已安裝。
+在本專案根目錄 `tools/load-dependency/` 執行：
 
 ```powershell
-$ldDemoId = [guid]::NewGuid().ToString('N')
-$ldDemoDir = Join-Path ([IO.Path]::GetTempPath()) "load-dependency-demo-$ldDemoId"
-$ldDemoCommand = "ld-http-server-$ldDemoId.cmd"
-npm.cmd install --global --prefix "$ldDemoDir" http-server
-if ($LASTEXITCODE -ne 0) { throw '安裝失敗，請先檢查 npm 訊息。' }
-Copy-Item -LiteralPath (Join-Path $ldDemoDir 'http-server.cmd') -Destination (Join-Path $ldDemoDir $ldDemoCommand)
+& .\verify.ps1
 ```
 
-額外複製一份帶隨機名稱的 npm 啟動檔，仍然執行剛裝好的 http-server。
-這樣即使你原本已安裝 http-server，也不會誤測到舊版本。
-`--prefix` 只影響這次安裝，不會更改 npm 的預設目錄。
-
-### 2. 確認「已安裝，但還找不到」
+如果你目前位於 playground 根目錄，則執行：
 
 ```powershell
-& (Join-Path $ldDemoDir $ldDemoCommand) --version
-Get-Command $ldDemoCommand -ErrorAction SilentlyContinue
+& .\tools\load-dependency\verify.ps1
 ```
 
-第一行用完整路徑應印出版本；第二行應**沒有輸出**，表示指令確實尚未進入搜尋路徑。
-如果第一行失敗，先處理安裝問題，不要繼續測試。
+腳本會自動完成：
 
-### 3. 模擬安裝程式新增 PATH
+1. 將 [http-server](https://github.com/http-party/http-server) 安裝到獨立暫存目錄，只查版本，不啟動伺服器。
+2. 建立唯一名稱的啟動檔，確認完整路徑能執行、按名稱仍找不到，避免誤測已存在的全域套件。
+3. 暫時將該目錄加入 Windows 使用者 PATH，返回目前終端機的正常提示字元，讓插件自行刷新。
+4. 按名稱執行新指令並核對來源，顯示 **`[PASS]`** 或 **`[FAIL]`**。
+5. 自動卸載測試套件、移除新增的 PATH 項目與暫存目錄，顯示 **`[CLEAN]`**。
 
-```powershell
-$ldDemoUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-$ldDemoNewPath = if ([string]::IsNullOrEmpty($ldDemoUserPath)) { $ldDemoDir } else { "$ldDemoUserPath;$ldDemoDir" }
-[Environment]::SetEnvironmentVariable('Path', $ldDemoNewPath, 'User')
-```
+不需要重開終端機或執行 `ld-refresh`。清理會保留其他 PATH 項目與測試期間其他程式新增的項目。
+若看到 `[CLEANUP FAILED]`，請依畫面列出的路徑手動移除該筆使用者 PATH 與暫存資料夾。
+執行期間請讓腳本完成；若強制關閉終端機或 VS Code，無法保證清理，啟動時印出的暫存路徑可供手動還原。
 
-這段只更新 Windows 儲存的使用者 PATH，沒有更新目前程序的 `$env:Path`。
-**等新的提示字元出現後**，插件應自動讀取變更。
+**請在既有的互動式 PowerShell 直接執行上述指令。** 不要用 `powershell.exe -File`、雙擊或另開子程序，驗證需要原終端機的下一次提示字元。
+若本機執行原則阻擋腳本，可先在同一個終端機執行 `Set-ExecutionPolicy -Scope Process Bypass`，只影響本次 PowerShell；受組織政策管理的環境請遵循其規範。
 
-### 4. 在同一個終端機測試
+選用 `.ps1` 是因為 `.sh` 會在 Bash／WSL 執行，無法驗證目前 Windows PowerShell 的 PATH 刷新。
+此腳本只驗證 Windows PowerShell；CMD、WSL 的刷新能力需另外測試。
 
-```powershell
-& $ldDemoCommand --version
-(Get-Command $ldDemoCommand).Source
-```
+**這個例子驗證什麼？** 單純 `npm install -g` 可能把工具放進原本就存在於 PATH 的目錄，沒有插件也能用。
+腳本使用新的獨立目錄，手動模擬安裝程式更新使用者 PATH，才能對照刷新前後的差異；它不會手動呼叫 `ld-refresh` 或先改程序 PATH 來製造成功結果。
+清理階段才移除程序 PATH 裡的測試項目。若另有 PATH 刷新工具，也可能通過，請搭配 **Show Status** 確認插件載入與刷新紀錄。
 
-預期印出版本，以及剛才 `$ldDemoDir` 底下的啟動檔路徑。
-Show Status 的刷新原因應包含 `persisted PATH changed`，時間對應第 3 步。
-
-| 檢查點 | 預期結果 |
-| --- | --- |
-| 第 2 步：完整路徑執行 | 成功，證明套件已安裝 |
-| 第 2 步：按名稱搜尋 | 找不到，證明目錄尚未在 PATH |
-| 第 4 步：按名稱執行 | 成功，且來源是這次的暫存目錄 |
-
-這組前後對照驗證了目前終端機有取得新的 PATH。
-沒有刷新機制的既有 PowerShell 通常仍找不到該名稱；若有其他 PATH 刷新工具，也可能得到相同結果，因此請一併確認插件狀態與刷新紀錄。
-若第 4 步失敗，先保留 Show Status 結果，再按下方「安裝完仍找不到指令」排查。
-
-### 5. 還原 PATH、卸載並刪除暫存目錄
-
-即使測試失敗，也請在**原本的終端機**執行清理。先驗證刪除目標確實是這次建立的暫存目錄：
-
-```powershell
-$ldDemoExpected = Join-Path ([IO.Path]::GetTempPath()) "load-dependency-demo-$ldDemoId"
-if ($ldDemoId -notmatch '^[a-f0-9]{32}$' -or $ldDemoDir -ne $ldDemoExpected) { throw '暫存目錄無法確認，請勿繼續清理。' }
-$ldDemoCurrentPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-$ldDemoRestoredPath = (($ldDemoCurrentPath -split ';') | Where-Object { $_ -ine $ldDemoDir }) -join ';'
-if ($ldDemoRestoredPath -eq '') { $ldDemoRestoredPath = $null }
-[Environment]::SetEnvironmentVariable('Path', $ldDemoRestoredPath, 'User')
-npm.cmd uninstall --global --prefix "$ldDemoDir" http-server
-Remove-Item -LiteralPath $ldDemoDir -Recurse -Force
-```
-
-清理只移除這次新增的 PATH 項目，保留其他現有項目，不會整份覆寫成測試前的舊值。
-待提示字元再次出現，確認：
-
-```powershell
-Test-Path -LiteralPath $ldDemoDir
-Get-Command $ldDemoCommand -ErrorAction SilentlyContinue
-($env:Path -split ';') -contains $ldDemoDir
-```
-
-依序預期為 `False`、沒有輸出、`False`，表示工具檔案與目前終端機中的測試 PATH 都已移除。
-若關閉了原本的終端機而遺失變數，請在 Windows「編輯帳戶的環境變數」中，只刪除這次 `load-dependency-demo-…` 的 PATH 項目，再移除對應的暫存資料夾。
-
-安裝目錄規則見 [npm 官方文件](https://docs.npmjs.com/cli/v11/configuring-npm/folders/)，版本指令見 [http-server 官方說明](https://github.com/http-party/http-server)。
+安裝目錄規則見 [npm 官方文件](https://docs.npmjs.com/cli/v11/configuring-npm/folders/)。
 
 ## 怎麼確認有沒有啟用？
 
@@ -150,7 +85,7 @@ Get-Command $ldDemoCommand -ErrorAction SilentlyContinue
 - 建置標記是 `2026-11-24-initialization-fix`，表示已載入這次修正版。
 - `LD profile active: yes` 表示新的 `+` 終端機預設已配置。
 - `Active terminal hook: confirmed by shell readiness marker` 才表示目前選中的終端機已真正載入。
-- 最近刷新時間與原因；PowerShell 的 `persisted PATH changed` 表示偵測到 Windows PATH 改變。
+- 最近刷新時間與原因；PowerShell 的 `path-change`（狀態畫面可能顯示 `persisted PATH changed`）表示偵測到 Windows PATH 改變。
 
 **單純「新套件能執行」不足以證明刷新生效。** 請用上面的獨立目錄測試，核對搜尋結果、來源路徑與刷新紀錄。
 若完全看不到狀態列，請先確認 VS Code 的「檢視 → 外觀 → 狀態列」已開啟。
@@ -182,12 +117,7 @@ Get-Command $ldDemoCommand -ErrorAction SilentlyContinue
 ld-refresh
 ```
 
-再試原本失敗的指令。若正在執行上面的驗證範例：
-
-```powershell
-& $ldDemoCommand --version
-Get-Command $ldDemoCommand
-```
+再試原本失敗的工具指令。若一鍵驗證顯示失敗，請先保留 Show Status 結果；驗證腳本會自動移除測試套件，要重測請重新執行 `& .\verify.ps1`。
 
 | 結果 | 意義與下一步 |
 | --- | --- |

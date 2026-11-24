@@ -55,6 +55,19 @@ local preview rebuilds in Show Status.
 
 ## Distribution
 
+`verify.ps1` is the interactive Windows PowerShell user demo. It temporarily writes
+User PATH at the user's request, installs http-server into a unique temporary
+prefix, then verifies discovery after delegating to the existing prompt. It never
+calls ld-refresh to obtain a passing result. Cleanup restores the prompt, removes
+only its own persisted/session PATH entry, and uninstalls/deletes its temporary
+package. Forced process termination can interrupt cleanup.
+
+On Windows, `npm test` also runs `test/verify-demo.ps1`: it substitutes only the
+registry boundary and npm installer with isolated fixtures, exercising the real
+PowerShell prompt hook. It covers success, no refresh, installation failure,
+disabled preflight, cleanup and preservation of concurrent PATH changes. The
+automated test never installs real packages or writes real User PATH.
+
 `npm run package` creates the VSIX and `release/SHA256SUMS`. Reinstall the VSIX and
 reopen managed terminals when updating the same preview version. Existing terminals
 retain copied shell scripts. Test profiles/runtimes/dependencies are excluded.
